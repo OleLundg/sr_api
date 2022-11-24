@@ -4,7 +4,6 @@ import urllib.request
 import datetime
 
 import requests
-from requests.exceptions import HTTPError
 
 
 # funktion för användarens navigering bland SR:s kanaler
@@ -81,7 +80,7 @@ def show_channel_scheme(_id):
     api_url = f'http://api.sr.se/v2/scheduledepisodes?channelid={_id}&format=json'
 
     resp = requests.get(api_url)
-    if resp.status_code == 404:
+    if resp.status_code == 404: # om sidan inte finns "Error 404"
         print("Kanalen har ingen information, testa en annan kanal")
         main()
 
@@ -92,7 +91,7 @@ def show_channel_scheme(_id):
         main()
 
     j = 1
-    while j <= pages:
+    while j <= pages: # loopar sior för utskrift av tablå
         api_url = f'http://api.sr.se/v2/scheduledepisodes?channelid={_id}&page={j}&format=json'
         pages, size = channel_pagination(api_url)
 
@@ -108,7 +107,7 @@ def show_channel_scheme(_id):
             if time[6] == "-":
                 i += 1
             else:
-                time = re.findall(r'\d+', time)
+                time = re.findall(r'\d+', time) # plockar ut siffror från en sträng för omvandling till tidsutskrift
                 startTime = datetime.datetime.fromtimestamp(int(time[0])/1000)
                 startTime = startTime.strftime('%H:%M')
                 i += 1
@@ -116,22 +115,7 @@ def show_channel_scheme(_id):
         j += 1
 
 
-def get_response_example():
-    response = requests.get('https://api.github.com/helloworld')
-
-    print(response.status_code)
-
-    if response.status_code == 200:
-        print("Success!")
-    if response.status_code == 404:
-        print("Not found!")
-
-    if response.status_code:
-        print("Success!")
-    else:
-        print("Error!")
-
-
+# fortsätt eller avsluta program
 def go_again():
     print("Vill du fortsätta?")
     answer = input("y/n: ")
