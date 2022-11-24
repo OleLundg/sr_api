@@ -1,36 +1,43 @@
 import json
 import re
 import urllib.request
+import datetime
 
 import requests
 from requests.exceptions import HTTPError
-import datetime
 
 
+# funktion för användarens navigering bland SR:s kanaler
 def set_input():
+    api_url = f'http://api.sr.se/v2/channels?page=1&format=json'
+    pages, size = channel_pagination(api_url)
     page = 1
-    loop = True
-    while loop:
-        input_a = input('Välj kanal, skriv "next" eller "back": ')
-        if input_a == 'next':
+    inner_loop = True
+    while inner_loop:
+        input_a = input('Välj kanal eller skriv "n/b" för att se fler: ')
+        if input_a == 'n': # tar oss till nästa sida av listan av kanaler
             page += 1
+            if page > pages:
+                print("Listan är slut, startar från början")
+                main()
             id_, name = get_channels(page)
             print(name)
-        elif input_a == 'back':
+        elif input_a == 'b': # backar bland listan med kanaler
             page -= 1
             if page < 1:
                 print('Du är redan på första sidan')
-                page += 1
+                main()
             else:
                 id_, name = get_channels(page)
                 print(name)
 
-        elif input_a.isdigit():
+        elif input_a.isdigit(): # returnerar kanalens id
             input_a = int(input_a)
             id_, name = get_channels(page)
             return id_[input_a]
 
 
+# funktion som behandlar sidans pagination med antal sidor och antal objekt på sidan
 def channel_pagination(api_url):
 
     response = urllib.request.urlopen(api_url)
@@ -46,6 +53,7 @@ def channel_pagination(api_url):
     return pages, size
 
 
+# funktion som returnerar kanalens id och namn
 def get_channels(page):
     api_url = f'http://api.sr.se/v2/channels?page={page}&format=json'
 
@@ -68,8 +76,14 @@ def get_channels(page):
     return id_, name
 
 
+# funktion som visar vald kanals programschema
 def show_channel_scheme(_id):
     api_url = f'http://api.sr.se/v2/scheduledepisodes?channelid={_id}&format=json'
+
+    resp = requests.get(api_url)
+    if resp.status_code == 404:
+        print("Kanalen har ingen information, testa en annan kanal")
+        main()
 
     pages, size = channel_pagination(api_url)
 
@@ -91,16 +105,19 @@ def show_channel_scheme(_id):
         while i < size:
             title = json_dict['schedule'][i]['title']
             time = json_dict['schedule'][i]['starttimeutc']
-            time = re.findall(r'\d+', time)
-            startTime = datetime.datetime.fromtimestamp(int(time[0])/1000)
-            startTime = startTime.strftime('%H:%M')
-            i += 1
-            print(startTime, title)
+            if time[6] == "-":
+                i += 1
+            else:
+                time = re.findall(r'\d+', time)
+                startTime = datetime.datetime.fromtimestamp(int(time[0])/1000)
+                startTime = startTime.strftime('%H:%M')
+                i += 1
+                print(startTime, title)
         j += 1
 
 
-def get_response(api):
-    response = requests.get(api)
+def get_response_example():
+    response = requests.get('https://api.github.com/helloworld')
 
     print(response.status_code)
 
@@ -115,11 +132,26 @@ def get_response(api):
         print("Error!")
 
 
+def go_again():
+    print("Vill du fortsätta?")
+    answer = input("y/n: ")
+    if answer == "y":
+        main()
+    elif answer == "n":
+        loop = False
+        return loop
+    else:
+        go_again()
+
+
 def main():
-    id_, name = get_channels(1)
-    print(name)
-    inp = set_input()
-    show_channel_scheme(inp)
+    loop = True
+    while loop:
+        id_, name = get_channels(1)
+        print(name)
+        inp = set_input()
+        show_channel_scheme(inp)
+        loop = go_again()
 
 
 if __name__ == '__main__':
